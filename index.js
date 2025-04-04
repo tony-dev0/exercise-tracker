@@ -19,13 +19,10 @@ app.get("/", (req, res) => {
 
 app.post("/api/users", async function (req, res) {
   const inputUsername = req.body.username;
-  console.log("debug 1");
   // Create a new user
   let newUser = new Users({ username: inputUsername });
-  console.log("debug 2");
   // save the user to the database
   const savedUser = await newUser.save();
-  console.log("created");
   if (!savedUser) {
     return res.json({ message: "User creation failed!" });
   }
@@ -90,8 +87,6 @@ app.get("/api/users/:_id/logs", async function (req, res) {
   const to =
     req.query.to || new Date(Date.now()).toISOString().substring(0, 10);
   const limit = Number(req.query.limit) || 0;
-
-  console.log("get user log");
 
   // Find the user
   let user = await Users.findById(userId).exec();
