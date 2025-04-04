@@ -16,29 +16,31 @@ app.use(express.static("public"));
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/views/index.html");
 });
+
 app.post("/api/users", async function (req, res) {
   const inputUsername = req.body.username;
+  console.log("debug 1");
   // Create a new user
   let newUser = new Users({ username: inputUsername });
+  console.log("debug 2");
   // save the user to the database
   const savedUser = await newUser.save();
-  savedUser
-    .then(() => {
-      res.json({ username: user.username, _id: user._id });
-    })
-    .catch((err) => {
-      console.error(err);
-      res.json({ message: "User creation failed!" });
-    });
+  console.log("created");
+  if (!savedUser) {
+    return res.json({ message: "User creation failed!" });
+  }
+  res.json(savedUser);
 });
 // Get all the users
-app.get("/api/users", function (req, res) {
-  Users.find({}, function (err, data) {
-    if (!err) return res.json(data);
-  });
+app.get("/api/users", async function (req, res) {
+  const user = await Users.find({});
+  if (!user) {
+    return res.json({ message: "There are no users in the database!" });
+  }
+  res.json(user);
 });
 // post a new exercise
-app.post("/api/users/:_id/exercises", function (req, res) {
+app.post("/api/users/:_id/exercises", async function (req, res) {
   var userId = req.params._id;
   var description = req.body.description;
   var duration = req.body.duration;
@@ -48,42 +50,32 @@ app.post("/api/users/:_id/exercises", function (req, res) {
   if (!date) {
     date = new Date().toISOString().substring(0, 10);
   }
-
-  console.log(
-    "looking for user with id [".toLocaleUpperCase() + userId + "] ..."
-  );
-
   // Find the user
-  Users.findById(userId, async (err, userInDb) => {
-    if (err) {
-      console.error(err);
-      res.json({ message: "There are no users with that ID in the database!" });
-    }
-    // Create new exercise
-    let newExercise = new Exercises({
-      userId: userInDb._id,
-      username: userInDb.username,
-      description: description,
-      duration: parseInt(duration),
-      date: date,
+  const user = await Users.findById(userId);
+  if (!user) {
+    return res.json({
+      message: "There are no users with that ID in the database!",
     });
-
-    const savedExercise = await newExercise.save();
-    savedExercise
-      .then((exercise) => {
-        console.log("exercise saved to DB");
-        res.json({
-          username: userInDb.username,
-          description: exercise.description,
-          duration: exercise.duration,
-          date: new Date(exercise.date).toDateString(),
-          _id: userInDb._id,
-        });
-      })
-      .catch((err) => {
-        console.error(err);
-        res.json({ message: "Exercise creation failed!" });
-      });
+  }
+  // Create new exercise
+  let newExercise = new Exercises({
+    userId: user._id,
+    username: user.username,
+    description: description,
+    duration: parseInt(duration),
+    date: date,
+  });
+  // Save the exercise to the database
+  const savedExercise = await newExercise.save();
+  if (!savedExercise) {
+    return res.json({ message: "Exercise creation failed!" });
+  }
+  res.json({
+    username: user.username,
+    description: savedExercise.description,
+    duration: savedExercise.duration,
+    date: new Date(savedExercise.date).toDateString(),
+    _id: user._id,
   });
 });
 
